@@ -15,6 +15,7 @@ class _MyMainPageState extends State<MyMainPage> {
   final TextEditingController _quickResultController = TextEditingController();
   
   final List<String> _operators = ['÷', '×', '-', '+', '^'];
+  bool _isError = false; 
 
   void _addValue(String value) {
     String expression = _expressionFieldController.text;
@@ -22,14 +23,19 @@ class _MyMainPageState extends State<MyMainPage> {
     if (expression.isNotEmpty) {
       final String lastSymbol = expression.substring(expression.length - 1);
 
+      // do not append if the last symbol in expression and current value are both operators
       if (_operators.contains(value) && _operators.contains(lastSymbol)) {
-        // do not append if the last symbol in expression and current value are both operators
         return;
       }
     }
 
-    _quickResultController.text = '';
-    _expressionFieldController.text += value;
+    if(_isError) {
+      _expressionFieldController.text = value;
+      _isError = false;
+    } else {
+      _quickResultController.text = '';
+      _expressionFieldController.text += value;
+    }
   }
 
   // clear expression field
@@ -43,8 +49,13 @@ class _MyMainPageState extends State<MyMainPage> {
     String expression = _expressionFieldController.text;
 
     if (expression.isNotEmpty) {
-      _quickResultController.text = '';
-      _expressionFieldController.text = expression.substring(0, expression.length - 1);
+      if(_isError) {
+        _clearExpressionField();
+        _isError = false;
+      } else {
+        _quickResultController.text = '';
+        _expressionFieldController.text = expression.substring(0, expression.length - 1);
+      }
     }
   }
 
@@ -73,6 +84,7 @@ class _MyMainPageState extends State<MyMainPage> {
 
       _quickResultController.text = '= $formattedResult';
     } catch (e) {
+      _isError = true;
       _expressionFieldController.text = 'Invalid Expression';
     }
   }

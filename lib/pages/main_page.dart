@@ -34,7 +34,28 @@ class _MyMainPageState extends State<MyMainPage> {
       _isError = false;
     } else {
       _quickResultController.text = '';
-      _expressionFieldController.text += value;
+      _insertValueAtCursor(value);
+    }
+  }
+
+  // insert value into the expression field at the current cursor position
+  void _insertValueAtCursor(String value) {
+    final expression = _expressionFieldController.text;
+    final selection = _expressionFieldController.selection;
+
+    // make sure that selection is valid
+    if(selection.start >= 0 && selection.end >= 0) {
+      final newExpression = expression.replaceRange(
+        selection.start, 
+        selection.end, 
+        value);
+      
+      // update the expression field controller with the new text and move the cursor
+      _expressionFieldController.value = TextEditingValue(
+        text: newExpression,
+        selection: TextSelection.collapsed(
+          offset: selection.start + value.length)
+      );
     }
   }
 
@@ -114,6 +135,8 @@ class _MyMainPageState extends State<MyMainPage> {
                   textAlign: TextAlign.end,
                   controller: _expressionFieldController,
                   readOnly: true,
+                  showCursor: true,
+                  autofocus: true,
                   style: TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.w400,

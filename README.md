@@ -15,6 +15,7 @@ Open Calculator - calculator app built with Flutter for mobile devices
 
 ### Dependencies
 - [math_expressions](https://pub.dev/packages/math_expressions)
+- [shared_preferences](https://pub.dev/packages/shared_preferences)
 
 ### Installation
 1. Clone the repo:

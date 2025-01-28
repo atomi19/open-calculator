@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:math_expressions/math_expressions.dart';
+import 'package:open_calculator/pages/history_page.dart';
+import 'package:open_calculator/data.dart';
 
 class MyMainPage extends StatefulWidget {
   const MyMainPage({super.key, required this.title});
@@ -13,9 +15,9 @@ class MyMainPage extends StatefulWidget {
 class _MyMainPageState extends State<MyMainPage> {
   final TextEditingController _expressionFieldController = TextEditingController();
   final TextEditingController _quickResultController = TextEditingController();
-  
+
   final List<String> _operators = ['÷', '×', '-', '+', '^'];
-  bool _isError = false; 
+  bool _isError = false;
 
   void _addValue(String value) {
     String expression = _expressionFieldController.text;
@@ -44,18 +46,13 @@ class _MyMainPageState extends State<MyMainPage> {
     final selection = _expressionFieldController.selection;
 
     // make sure that selection is valid
-    if(selection.start >= 0 && selection.end >= 0) {
-      final newExpression = expression.replaceRange(
-        selection.start, 
-        selection.end, 
-        value);
-      
+    if (selection.start >= 0 && selection.end >= 0) {
+      final newExpression = expression.replaceRange(selection.start, selection.end, value);
+
       // update the expression field controller with the new text and move the cursor
       _expressionFieldController.value = TextEditingValue(
         text: newExpression,
-        selection: TextSelection.collapsed(
-          offset: selection.start + value.length)
-      );
+        selection: TextSelection.collapsed(offset: selection.start + value.length));
     }
   }
 
@@ -95,14 +92,16 @@ class _MyMainPageState extends State<MyMainPage> {
     Parser p = Parser();
 
     try {
-      String replaceOperators = _replaceOperatorsSymbols(_expressionFieldController.text);
-      Expression expression = p.parse(replaceOperators);
+      String expression = _expressionFieldController.text;
+      String replaceOperators = _replaceOperatorsSymbols(expression);
+      Expression parsedExpression = p.parse(replaceOperators);
 
-      double result = expression.evaluate(EvaluationType.REAL, ContextModel());
+      double result = parsedExpression.evaluate(EvaluationType.REAL, ContextModel());
 
       // format result as a whole number if it's decimal is 0, otherwise keep decimals
       String formattedResult = (result % 1 == 0) ? result.toInt().toString() : result.toString();
 
+      _saveExpressionToHistory('$expression = $formattedResult');
       _quickResultController.text = '= $formattedResult';
     } catch (e) {
       _isError = true;
@@ -110,83 +109,115 @@ class _MyMainPageState extends State<MyMainPage> {
     }
   }
 
+  Future<void> _saveExpressionToHistory(String expression) async {
+    await saveHistory(expression);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          Expanded(child: SizedBox()),
-          Column(
-            children: [
-              TextField(
-                textAlign: TextAlign.end,
-                readOnly: true,
-                controller: _quickResultController,
-                style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.w400,
-                    fontSize: 45),
-                decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.fromLTRB(15, 5, 15, 5),
-                    border: InputBorder.none),
-              ),
-              TextField(
-                  textAlign: TextAlign.end,
-                  controller: _expressionFieldController,
-                  readOnly: true,
-                  showCursor: true,
-                  autofocus: true,
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.w400,
-                    fontSize: 30,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.all(10),
+              child: Align(
+                alignment: Alignment.topRight,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context, 
+                      MaterialPageRoute(
+                        builder: (context) => HistoryPage()));
+                  },
+                  style: ButtonStyle(
+                    iconColor: WidgetStateProperty.resolveWith<Color?>(
+                      (Set<WidgetState> states) {
+                        if(states.contains(WidgetState.pressed)) {
+                          return Colors.grey[400];
+                        }
+                        return Colors.black;
+                      }
+                    ),
+                    backgroundColor: WidgetStatePropertyAll(Colors.transparent),
+                    overlayColor: WidgetStatePropertyAll(Colors.transparent)
                   ),
+                  child: const Icon(Icons.history, size: 24,)),
+              )),
+            Expanded(child: SizedBox()),
+            Column(
+              children: [
+                TextField(
+                  textAlign: TextAlign.end,
+                  readOnly: true,
+                  controller: _quickResultController,
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w400,
+                      fontSize: 45),
                   decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.fromLTRB(15, 10, 15, 10),
-                      border: InputBorder.none)),
-              GridView.count(
-                padding: EdgeInsets.all(10),
-                mainAxisSpacing: 10, // horizontal spacing between buttons
-                crossAxisSpacing: 10, // vertical spacing between buttons
-                crossAxisCount: 4,
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                children: [
-                  // first row
-                  TextButton(onPressed: () => _addValue('('), child: const Text('(')),
-                  TextButton(onPressed: () => _addValue(')'), child: const Text(')')),
-                  TextButton(
-                      onPressed: () => _removeLastCharacter(),
-                      onLongPress: () => _clearExpressionField(),
-                      child: const Icon(Icons.backspace_outlined,
-                          color: Colors.black, size: 28)),
-                  TextButton(onPressed: () => _addValue('÷'), child: Text('÷')),
-                  // second row
-                  TextButton(onPressed: () => _addValue('7'), child: const Text('7')),
-                  TextButton(onPressed: () => _addValue('8'), child: const Text('8')),
-                  TextButton(onPressed: () => _addValue('9'), child: const Text('9')),
-                  TextButton(onPressed: () => _addValue('×'), child: const Text('×')),
-                  // third row
-                  TextButton(onPressed: () => _addValue('4'), child: const Text('4')),
-                  TextButton(onPressed: () => _addValue('5'), child: const Text('5')),
-                  TextButton(onPressed: () => _addValue('6'), child: const Text('6')),
-                  TextButton(onPressed: () => _addValue('-'), child: const Text('−')),
-                  // fourth row
-                  TextButton(onPressed: () => _addValue('1'), child: const Text('1')),
-                  TextButton(onPressed: () => _addValue('2'), child: const Text('2')),
-                  TextButton(onPressed: () => _addValue('3'), child: const Text('3')),
-                  TextButton(onPressed: () => _addValue('+'), child: const Text('+')),
-                  // fifth row
-                  TextButton(onPressed: () => _addValue('0'), child: const Text('0')),
-                  TextButton(onPressed: () => _addValue('.'), child: const Text('.')),
-                  TextButton(onPressed: () => _addValue('^'), child: const Text('^')),
-                  TextButton(onPressed: () => _solveExpression(), child: const Text('=')),
-                ],
-              ),
-            ],
-          ),
-        ],
+                      contentPadding: const EdgeInsets.fromLTRB(15, 5, 15, 5),
+                      border: InputBorder.none),
+                ),
+                TextField(
+                    textAlign: TextAlign.end,
+                    controller: _expressionFieldController,
+                    readOnly: true,
+                    showCursor: true,
+                    autofocus: true,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w400,
+                      fontSize: 30,
+                    ),
+                    decoration: InputDecoration(
+                        contentPadding:
+                            const EdgeInsets.fromLTRB(15, 10, 15, 10),
+                        border: InputBorder.none)),
+                GridView.count(
+                  padding: EdgeInsets.all(10),
+                  mainAxisSpacing: 10, // horizontal spacing between buttons
+                  crossAxisSpacing: 10, // vertical spacing between buttons
+                  crossAxisCount: 4,
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  children: [
+                    // first row
+                    TextButton(onPressed: () => _addValue('('), child: const Text('(')),
+                    TextButton(onPressed: () => _addValue(')'), child: const Text(')')),
+                    TextButton(
+                        onPressed: () => _removeLastCharacter(),
+                        onLongPress: () => _clearExpressionField(),
+                        child: const Icon(Icons.backspace_outlined,
+                            color: Colors.black, size: 28)),
+                    TextButton(onPressed: () => _addValue('÷'), child: Text('÷')),
+                    // second row
+                    TextButton(onPressed: () => _addValue('7'), child: const Text('7')),
+                    TextButton(onPressed: () => _addValue('8'), child: const Text('8')),
+                    TextButton(onPressed: () => _addValue('9'), child: const Text('9')),
+                    TextButton(onPressed: () => _addValue('×'), child: const Text('×')),
+                    // third row
+                    TextButton(onPressed: () => _addValue('4'), child: const Text('4')),
+                    TextButton(onPressed: () => _addValue('5'), child: const Text('5')),
+                    TextButton(onPressed: () => _addValue('6'), child: const Text('6')),
+                    TextButton(onPressed: () => _addValue('-'), child: const Text('−')),
+                    // fourth row
+                    TextButton(onPressed: () => _addValue('1'), child: const Text('1')),
+                    TextButton(onPressed: () => _addValue('2'), child: const Text('2')),
+                    TextButton(onPressed: () => _addValue('3'), child: const Text('3')),
+                    TextButton(onPressed: () => _addValue('+'), child: const Text('+')),
+                    // fifth row
+                    TextButton(onPressed: () => _addValue('0'), child: const Text('0')),
+                    TextButton(onPressed: () => _addValue('.'), child: const Text('.')),
+                    TextButton(onPressed: () => _addValue('^'), child: const Text('^')),
+                    TextButton(onPressed: () => _solveExpression(), child: const Text('=')),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

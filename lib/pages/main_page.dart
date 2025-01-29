@@ -64,16 +64,31 @@ class _MyMainPageState extends State<MyMainPage> {
 
   // remove last character in expression
   void _removeLastCharacter() {
-    String expression = _expressionFieldController.text;
+    final expression = _expressionFieldController.text;
+    final selection = _expressionFieldController.selection;
 
-    if (expression.isNotEmpty) {
-      if(_isError) {
-        _clearExpressionField();
-        _isError = false;
-      } else {
-        _quickResultController.text = '';
-        _expressionFieldController.text = expression.substring(0, expression.length - 1);
+    _quickResultController.text = '';
+
+    if(selection.start == selection.end) {
+      // remove one character to the left from cursor
+      if(selection.start > 0) {
+        final newExpression = 
+        expression.substring(0, selection.start - 1) + 
+        expression.substring(selection.start);
+
+        _expressionFieldController.value = TextEditingValue(
+          text: newExpression,
+          selection: TextSelection.collapsed(offset: selection.start - 1)
+        );
       }
+    } else {
+      // remove selected text
+      final newExpression = expression.substring(0, selection.start) + expression.substring(selection.end);
+
+      _expressionFieldController.value = TextEditingValue(
+        text: newExpression,
+        selection: TextSelection.collapsed(offset: selection.start)
+      );
     }
   }
 

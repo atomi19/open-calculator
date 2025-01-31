@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:open_calculator/data.dart';
+import 'package:flutter/services.dart';
 
 class HistoryPage extends StatefulWidget {
-  const HistoryPage({super.key});
+  final Function(String) insertExpressionIntoExpressionField;
+
+  const HistoryPage({super.key, required this.insertExpressionIntoExpressionField});
 
   @override
   HistoryPageState createState() => HistoryPageState();
@@ -29,6 +32,23 @@ class HistoryPageState extends State<HistoryPage> {
     setState(() {
       history.clear();
     });
+  }
+
+  // take expression from history and insert it into expression field 
+  void _takeExpression(String expression) {
+    String expressionPart = expression.substring(0, expression.indexOf("=")).trim();
+    widget.insertExpressionIntoExpressionField(expressionPart);
+    Navigator.pop(context);
+  }
+
+  // copy expression to clipboard
+  void _copyExpression(String expression) {
+    Clipboard.setData(ClipboardData(text: expression));
+
+    // show Snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Copied to clipboard'))
+    );
   }
 
   @override
@@ -89,6 +109,20 @@ class HistoryPageState extends State<HistoryPage> {
               )
             ),
             child: ListTile(
+              leading: PopupMenuButton<String>(
+                onSelected: (action) {
+                  if(action == 'take_expression') {
+                    _takeExpression(history[index]);
+                  } else if(action == 'copy_index') {
+                    _copyExpression(history[index]);
+                  }
+                },
+                itemBuilder: (BuildContext context) {
+                  return [
+                    PopupMenuItem(value: 'take_expression', child: const Text('Take expression')),
+                    PopupMenuItem(value: 'copy_index', child: const Text('Copy'))
+                  ];
+                }),
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [

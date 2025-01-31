@@ -144,7 +144,13 @@ class _MyMainPageState extends State<MyMainPage> {
                     Navigator.push(
                       context, 
                       MaterialPageRoute(
-                        builder: (context) => HistoryPage()));
+                        builder: (context) => HistoryPage(
+                          insertExpressionIntoExpressionField: (expression) {
+                            setState(() {
+                              _expressionFieldController.text = expression;
+                            });
+                          }
+                        )));
                   },
                   style: ButtonStyle(
                     iconColor: WidgetStateProperty.resolveWith<Color?>(

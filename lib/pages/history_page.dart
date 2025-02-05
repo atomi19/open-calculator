@@ -36,7 +36,7 @@ class HistoryPageState extends State<HistoryPage> {
 
   // take expression from history and insert it into expression field 
   void _takeExpression(String expression) {
-    String expressionPart = expression.substring(0, expression.indexOf("=")).trim();
+    String expressionPart = _getExpressionParts(expression)[0].trim();
     widget.insertExpressionIntoExpressionField(expressionPart);
     Navigator.pop(context);
   }
@@ -46,8 +46,27 @@ class HistoryPageState extends State<HistoryPage> {
     Clipboard.setData(ClipboardData(text: expression));
 
     // show Snackbar
+    _showSnackBar();
+  }
+
+  // copy result to clipboard
+  void _copyResult(String expression) {
+    String resultPart = _getExpressionParts(expression)[1].trim();
+    Clipboard.setData(ClipboardData(text: resultPart.trim()));
+
+    // show Snackbar
+    _showSnackBar();
+  }
+
+  // get expression and result parts from expression
+  List<String> _getExpressionParts(String expression) {
+    List<String> parts = expression.split('=');
+    return parts;
+  }
+
+  void _showSnackBar() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Copied to clipboard'))
+      SnackBar(content: const Text('Copied to clipboard'))
     );
   }
 
@@ -111,16 +130,23 @@ class HistoryPageState extends State<HistoryPage> {
             child: ListTile(
               leading: PopupMenuButton<String>(
                 onSelected: (action) {
-                  if(action == 'take_expression') {
-                    _takeExpression(history[index]);
-                  } else if(action == 'copy_index') {
-                    _copyExpression(history[index]);
+                  switch (action) {
+                    case 'take_expression':
+                      _takeExpression(history[index]);
+                      break;
+                    case 'copy_expression':
+                      _copyExpression(history[index]);
+                      break;
+                    case 'copy_result':
+                      _copyResult(history[index]);
+                      break;
                   }
                 },
                 itemBuilder: (BuildContext context) {
                   return [
                     PopupMenuItem(value: 'take_expression', child: const Text('Take expression')),
-                    PopupMenuItem(value: 'copy_index', child: const Text('Copy'))
+                    PopupMenuItem(value: 'copy_expression', child: const Text('Copy')),
+                    PopupMenuItem(value: 'copy_result', child: const Text('Copy result'))
                   ];
                 }),
               title: Row(

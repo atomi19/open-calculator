@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:math_expressions/math_expressions.dart';
 import 'package:open_calculator/pages/history_page.dart';
-import 'package:open_calculator/data.dart';
+import 'package:open_calculator/utils/calculator_logic.dart';
+import 'package:open_calculator/widgets/button_grid.dart';
+import 'package:open_calculator/widgets/expression_field.dart';
 
 class MyMainPage extends StatefulWidget {
   const MyMainPage({super.key, required this.title});
@@ -13,14 +14,14 @@ class MyMainPage extends StatefulWidget {
 }
 
 class _MyMainPageState extends State<MyMainPage> {
-  final TextEditingController _expressionFieldController = TextEditingController();
+  final TextEditingController _expressionController = TextEditingController();
   final TextEditingController _quickResultController = TextEditingController();
 
   final List<String> _operators = ['÷', '×', '-', '+', '^'];
   bool _isError = false;
 
   void _addValue(String value) {
-    String expression = _expressionFieldController.text;
+    String expression = _expressionController.text;
 
     if (expression.isNotEmpty) {
       final String lastSymbol = expression.substring(expression.length - 1);
@@ -32,7 +33,7 @@ class _MyMainPageState extends State<MyMainPage> {
     }
 
     if(_isError) {
-      _expressionFieldController.text = value;
+      _expressionController.text = value;
       _isError = false;
     } else {
       _quickResultController.text = '';
@@ -42,15 +43,15 @@ class _MyMainPageState extends State<MyMainPage> {
 
   // insert value into the expression field at the current cursor position
   void _insertValueAtCursor(String value) {
-    final expression = _expressionFieldController.text;
-    final selection = _expressionFieldController.selection;
+    final expression = _expressionController.text;
+    final selection = _expressionController.selection;
 
     // make sure that selection is valid
     if (selection.start >= 0 && selection.end >= 0) {
       final newExpression = expression.replaceRange(selection.start, selection.end, value);
 
       // update the expression field controller with the new text and move the cursor
-      _expressionFieldController.value = TextEditingValue(
+      _expressionController.value = TextEditingValue(
         text: newExpression,
         selection: TextSelection.collapsed(offset: selection.start + value.length));
     }
@@ -59,13 +60,13 @@ class _MyMainPageState extends State<MyMainPage> {
   // clear expression field
   void _clearExpressionField() {
     _quickResultController.text = '';
-    _expressionFieldController.text = '';
+    _expressionController.text = '';
   }
 
-  // remove last character in expression
+  // remove character(s) in expression
   void _removeLastCharacter() {
-    final expression = _expressionFieldController.text;
-    final selection = _expressionFieldController.selection;
+    final expression = _expressionController.text;
+    final selection = _expressionController.selection;
 
     _quickResultController.text = '';
 
@@ -76,7 +77,7 @@ class _MyMainPageState extends State<MyMainPage> {
         expression.substring(0, selection.start - 1) + 
         expression.substring(selection.start);
 
-        _expressionFieldController.value = TextEditingValue(
+        _expressionController.value = TextEditingValue(
           text: newExpression,
           selection: TextSelection.collapsed(offset: selection.start - 1)
         );
@@ -85,49 +86,26 @@ class _MyMainPageState extends State<MyMainPage> {
       // remove selected text
       final newExpression = expression.substring(0, selection.start) + expression.substring(selection.end);
 
-      _expressionFieldController.value = TextEditingValue(
+      _expressionController.value = TextEditingValue(
         text: newExpression,
         selection: TextSelection.collapsed(offset: selection.start)
       );
     }
   }
 
-  // if there is a division or multiplication sign, replace them with / or *
-  String _replaceOperatorsSymbols(String expression) {
-    String replacedOperators = expression;
-
-    if (expression.contains('÷') || expression.contains('×')) {
-      replacedOperators = expression.replaceAll('÷', '/').replaceAll('×', '*');
-    }
-
-    return replacedOperators;
-  }
-
   void _solveExpression() {
-    Parser p = Parser();
+    String result = CalculatorLogic.solveExpression(_expressionController.text);
 
-    try {
-      String expression = _expressionFieldController.text;
-      String replaceOperators = _replaceOperatorsSymbols(expression);
-      Expression parsedExpression = p.parse(replaceOperators);
+    setState(() {
+      if(result == 'Invalid Expression') {
+        _isError = true;
+      }
+      _quickResultController.text = '= $result';
+    });
 
-      double result = parsedExpression.evaluate(EvaluationType.REAL, ContextModel());
-
-      // format result as a whole number if it's decimal is 0, otherwise keep decimals
-      String formattedResult = (result % 1 == 0) ? result.toInt().toString() : result.toString();
-
-      _saveExpressionToHistory('$expression = $formattedResult');
-      _quickResultController.text = '= $formattedResult';
-    } catch (e) {
-      _isError = true;
-      _expressionFieldController.text = 'Invalid Expression';
-    }
+    CalculatorLogic.saveExpressionToHistory('${_expressionController.text} = $result');
   }
-
-  Future<void> _saveExpressionToHistory(String expression) async {
-    await saveHistory(expression);
-  }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -146,9 +124,7 @@ class _MyMainPageState extends State<MyMainPage> {
                       MaterialPageRoute(
                         builder: (context) => HistoryPage(
                           insertExpressionIntoExpressionField: (expression) {
-                            setState(() {
-                              _expressionFieldController.text = expression;
-                            });
+                            _expressionController.text = expression;
                           }
                         )));
                   },
@@ -164,77 +140,22 @@ class _MyMainPageState extends State<MyMainPage> {
                     backgroundColor: WidgetStatePropertyAll(Colors.transparent),
                     overlayColor: WidgetStatePropertyAll(Colors.transparent)
                   ),
-                  child: const Icon(Icons.history, size: 24,)),
+                  child: const Icon(Icons.history, size: 24)
+                )
               )),
             Expanded(child: SizedBox()),
             Column(
               children: [
-                TextField(
-                  textAlign: TextAlign.end,
-                  readOnly: true,
-                  controller: _quickResultController,
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.w400,
-                      fontSize: 45),
-                  decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.fromLTRB(15, 5, 15, 5),
-                      border: InputBorder.none),
+                ExpressionField(
+                  expressionController: _expressionController, 
+                  quickResultController: _quickResultController
                 ),
-                TextField(
-                    textAlign: TextAlign.end,
-                    controller: _expressionFieldController,
-                    readOnly: true,
-                    showCursor: true,
-                    autofocus: true,
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.w400,
-                      fontSize: 30,
-                    ),
-                    decoration: InputDecoration(
-                        contentPadding:
-                            const EdgeInsets.fromLTRB(15, 10, 15, 10),
-                        border: InputBorder.none)),
-                GridView.count(
-                  padding: EdgeInsets.all(10),
-                  mainAxisSpacing: 10, // horizontal spacing between buttons
-                  crossAxisSpacing: 10, // vertical spacing between buttons
-                  crossAxisCount: 4,
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  children: [
-                    // first row
-                    TextButton(onPressed: () => _addValue('('), child: const Text('(')),
-                    TextButton(onPressed: () => _addValue(')'), child: const Text(')')),
-                    TextButton(
-                        onPressed: () => _removeLastCharacter(),
-                        onLongPress: () => _clearExpressionField(),
-                        child: const Icon(Icons.backspace_outlined,
-                            color: Colors.black, size: 28)),
-                    TextButton(onPressed: () => _addValue('÷'), child: Text('÷')),
-                    // second row
-                    TextButton(onPressed: () => _addValue('7'), child: const Text('7')),
-                    TextButton(onPressed: () => _addValue('8'), child: const Text('8')),
-                    TextButton(onPressed: () => _addValue('9'), child: const Text('9')),
-                    TextButton(onPressed: () => _addValue('×'), child: const Text('×')),
-                    // third row
-                    TextButton(onPressed: () => _addValue('4'), child: const Text('4')),
-                    TextButton(onPressed: () => _addValue('5'), child: const Text('5')),
-                    TextButton(onPressed: () => _addValue('6'), child: const Text('6')),
-                    TextButton(onPressed: () => _addValue('-'), child: const Text('−')),
-                    // fourth row
-                    TextButton(onPressed: () => _addValue('1'), child: const Text('1')),
-                    TextButton(onPressed: () => _addValue('2'), child: const Text('2')),
-                    TextButton(onPressed: () => _addValue('3'), child: const Text('3')),
-                    TextButton(onPressed: () => _addValue('+'), child: const Text('+')),
-                    // fifth row
-                    TextButton(onPressed: () => _addValue('0'), child: const Text('0')),
-                    TextButton(onPressed: () => _addValue('.'), child: const Text('.')),
-                    TextButton(onPressed: () => _addValue('^'), child: const Text('^')),
-                    TextButton(onPressed: () => _solveExpression(), child: const Text('=')),
-                  ],
-                ),
+                ButtonGrid(
+                  onButtonPressed: _addValue,
+                  onBackspace: _removeLastCharacter,
+                  onClear: _clearExpressionField,
+                  onEquals: _solveExpression,
+                )
               ],
             ),
           ],

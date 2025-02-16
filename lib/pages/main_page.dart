@@ -17,28 +17,10 @@ class _MyMainPageState extends State<MyMainPage> {
   final TextEditingController _expressionController = TextEditingController();
   final TextEditingController _quickResultController = TextEditingController();
 
-  final List<String> _operators = ['÷', '×', '-', '+', '^'];
-  bool _isError = false;
-
   void _addValue(String value) {
-    String expression = _expressionController.text;
-
-    if (expression.isNotEmpty) {
-      final String lastSymbol = expression.substring(expression.length - 1);
-
-      // do not append if the last symbol in expression and current value are both operators
-      if (_operators.contains(value) && _operators.contains(lastSymbol)) {
-        return;
-      }
-    }
-
-    if(_isError) {
-      _expressionController.text = value;
-      _isError = false;
-    } else {
-      _quickResultController.text = '';
-      _insertValueAtCursor(value);
-    }
+    _quickResultController.text = '';
+    _insertValueAtCursor(value);
+    _solveExpression(false);
   }
 
   // insert value into the expression field at the current cursor position
@@ -93,17 +75,20 @@ class _MyMainPageState extends State<MyMainPage> {
     }
   }
 
-  void _solveExpression() {
+  void _solveExpression(bool addToExpressionHistory) {
     String result = CalculatorLogic.solveExpression(_expressionController.text);
 
-    setState(() {
-      if(result == 'Invalid Expression') {
-        _isError = true;
-      }
-      _quickResultController.text = '= $result';
-    });
+    if(result != '') {
+      setState(() {
+        _quickResultController.text = '= $result';
+      });
+    }
 
-    CalculatorLogic.saveExpressionToHistory('${_expressionController.text} = $result');
+    if(addToExpressionHistory) {
+      CalculatorLogic.saveExpressionToHistory('${_expressionController.text} = $result');
+      _expressionController.text =  _quickResultController.text.replaceAll('=', '').trim();
+      _quickResultController.text = '';
+    }
   }
   
   @override
@@ -154,7 +139,7 @@ class _MyMainPageState extends State<MyMainPage> {
                   onButtonPressed: _addValue,
                   onBackspace: _removeLastCharacter,
                   onClear: _clearExpressionField,
-                  onEquals: _solveExpression,
+                  onEquals: () => _solveExpression(true),
                 )
               ],
             ),

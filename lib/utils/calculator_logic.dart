@@ -14,17 +14,23 @@ class CalculatorLogic {
   }
 
   static String solveExpression(String expression) {
-    Parser p = Parser();
+    final Parser p = Parser();
+    const List<String> operators = ['÷', '×', '-', '+', '^'];
 
     try {
-      String replacedOperators = replaceOperatorsSymbols(expression);
-      Expression parsedExpression = p.parse(replacedOperators);
+      String replacedExpression = replaceOperatorsSymbols(expression);
+
+      if(!operators.any((symbol) => expression.contains(symbol))) {
+        return '';
+      }
+
+      Expression parsedExpression = p.parse(replacedExpression);
       double result = parsedExpression.evaluate(EvaluationType.REAL, ContextModel());
 
       // format result as a whole number if it's decimal is 0, otherwise keep decimals
       return (result % 1 == 0) ? result.toInt().toString() : result.toString();
     } catch (e) {
-      return 'Invalid Expression';
+      return '';
     }
   }
 

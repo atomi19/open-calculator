@@ -15,14 +15,9 @@ class CalculatorLogic {
 
   static String solveExpression(String expression) {
     final Parser p = Parser();
-    const List<String> operators = ['÷', '×', '-', '+', '^'];
 
     try {
       String replacedExpression = replaceOperatorsSymbols(expression);
-
-      if(!operators.any((symbol) => expression.contains(symbol))) {
-        return '';
-      }
 
       Expression parsedExpression = p.parse(replacedExpression);
       double result = parsedExpression.evaluate(EvaluationType.REAL, ContextModel());

@@ -38,8 +38,9 @@ class ExpressionField extends StatelessWidget {
             fontSize: 30,
           ),
           decoration: InputDecoration(
-              contentPadding: const EdgeInsets.fromLTRB(15, 10, 15, 10),
-              border: InputBorder.none)
+            contentPadding: const EdgeInsets.fromLTRB(15, 10, 15, 10),
+            border: InputBorder.none
+          )
         ),
       ],
     );

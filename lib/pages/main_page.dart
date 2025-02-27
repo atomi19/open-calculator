@@ -16,6 +16,7 @@ class MyMainPage extends StatefulWidget {
 class _MyMainPageState extends State<MyMainPage> {
   final TextEditingController _expressionController = TextEditingController();
   final TextEditingController _quickResultController = TextEditingController();
+  final List<String> operators = ['/', '*', '-', '+', '^'];
 
   void _addValue(String value) {
     _quickResultController.text = '';
@@ -76,7 +77,9 @@ class _MyMainPageState extends State<MyMainPage> {
   }
 
   void _solveExpression(bool addToExpressionHistory) {
-    String result = CalculatorLogic.solveExpression(_expressionController.text);
+    final String expression = CalculatorLogic.replaceOperatorsSymbols(_expressionController.text);
+
+    String result = CalculatorLogic.solveExpression(expression);
 
     if(result != '') {
       setState(() {
@@ -84,11 +87,19 @@ class _MyMainPageState extends State<MyMainPage> {
       });
     }
 
+    // add expression to history only on equals to button click
     if(addToExpressionHistory) {
-      CalculatorLogic.saveExpressionToHistory('${_expressionController.text} = $result');
-      _expressionController.text =  _quickResultController.text.replaceAll('=', '').trim();
-      _quickResultController.text = '';
+      if(_containsOperators(expression)) {
+        CalculatorLogic.saveExpressionToHistory('$expression = $result');
+        _expressionController.text = _quickResultController.text.replaceAll('=', '').trim();
+        _quickResultController.text = '';
+      }
     }
+  }
+
+  // check if expression contains math operators (/, *, -, +, ^)
+  bool _containsOperators(String expression) {
+    return operators.any((element) => expression.contains(element));
   }
   
   @override
@@ -141,7 +152,7 @@ class _MyMainPageState extends State<MyMainPage> {
                   onClear: _clearExpressionField,
                   onEquals: () => _solveExpression(true),
                 )
-              ],
+              ]
             ),
           ],
         ),
